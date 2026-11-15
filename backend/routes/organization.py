@@ -26,57 +26,21 @@ class OrganizationCreate(BaseModel):
     phone: str | None = None
     address: str | None = None
 
-
-class OrganizationAdminRegistration(BaseModel):
-    name: str
-    email: EmailStr
-    phone: str | None = None
-    address: str | None = None
     admin_name: str
     admin_email: EmailStr
     admin_password: str = Field(min_length=8)
 
 
-@router.post("/register")
+@router.post("/register-with-admin")
 def register_organization(
     data: OrganizationCreate,
     db: Session = Depends(get_db)
 ):
+    organization_email = data.email.lower()
+    admin_email = data.admin_email.lower()
+
     existing = db.query(Organization).filter(
-        Organization.email == data.email.lower()
-    ).first()
-
-    if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="Organization already registered"
-        )
-
-    organization = Organization(
-        name=data.name,
-        email=data.email.lower(),
-        phone=data.phone,
-        address=data.address
-    )
-
-    db.add(organization)
-    db.commit()
-    db.refresh(organization)
-
-    return {
-        "message": "Organization registered successfully",
-        "organization_id": organization.id,
-        "organization_name": organization.name
-    }
-
-
-@router.post("/register-with-admin")
-def register_organization_with_admin(
-    data: OrganizationAdminRegistration,
-    db: Session = Depends(get_db)
-):
-    existing = db.query(Organization).filter(
-        Organization.email == data.email.lower()
+        Organization.email == organization_email
     ).first()
 
     if existing:
@@ -86,8 +50,8 @@ def register_organization_with_admin(
         )
 
     organization = Organization(
-        name=data.name,
-        email=data.email.lower(),
+        name=data.name.strip(),
+        email=organization_email,
         phone=data.phone,
         address=data.address
     )
@@ -98,28 +62,25 @@ def register_organization_with_admin(
 
         admin = OrganizationAdmin(
             organization_id=organization.id,
-            name=data.admin_name,
-            email=data.admin_email.lower(),
+            name=data.admin_name.strip(),
+            email=admin_email,
             password_hash=password_hash.hash(data.admin_password)
         )
 
         db.add(admin)
         db.commit()
-
         db.refresh(organization)
-        db.refresh(admin)
 
         return {
-            "message": "Organization and admin registered successfully",
+            "message": "Organization registered successfully",
             "organization_id": organization.id,
             "organization_name": organization.name,
-            "admin": {
-                "id": admin.id,
-                "name": admin.name,
-                "email": admin.email
-            }
+            "admin_email": admin.email
         }
 
     except Exception:
         db.rollback()
-        raise
+        raise HTTPException(
+            status_code=500,
+            detail="Organization registration failed"
+        )
