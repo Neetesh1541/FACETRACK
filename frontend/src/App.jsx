@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
-const API = "http://127.0.0.1:8000";
+const API = "https://facetrack-backend-ahlo.onrender.com";
 
 const today = () => {
   const d = new Date();
