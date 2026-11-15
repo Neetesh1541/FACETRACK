@@ -2,6 +2,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from database import engine
+from models.models import Base
+
 from routes.organization import router as organization_router
 from routes.auth import router as auth_router
 from routes.employees import router as employee_router
@@ -11,13 +14,17 @@ from routes.attendance_reports import router as attendance_reports_router
 from routes.attendance_history import router as attendance_history_router
 from routes.office_devices import router as office_devices_router
 
+
+# Create only missing database tables.
+# Existing tables and data will not be deleted.
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
     title="FACETRACK API",
     description="Multi-Organization Face Recognition Attendance System",
     version="1.0.0"
 )
 
-# Allow React frontend to communicate with FastAPI
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -30,7 +37,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Existing API routes
 app.include_router(organization_router)
 app.include_router(auth_router)
 app.include_router(employee_router)
